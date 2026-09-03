@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HeritageYatra | Discover India's Local Heritage & Eco-Tourism</title>
+  <meta name="description" content="Explore traditional folk art, living culture, heritage places, and sustainable eco-tourism destinations with verified local artisans." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            culture: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12'
+            },
+            eco: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet.js CSS for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-amber-200 selection:text-amber-900">
+
+  <!-- =========================================================================
+       1. Top LibreTranslate & Multilingual Status Bar
+       ========================================================================= -->
+  <div id="api-status-bar" class="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="engineStatusText">
+          <strong>Translation Engine Active:</strong> Local LibreTranslate (<code class="bg-black/40 px-1.5 py-0.5 rounded text-amber-300">localhost:5000</code>) &amp; Instant Multilingual Fallback Ready
+        </span>
+      </div>
+      <div class="flex items-center gap-3 text-slate-300">
+        <span class="text-amber-300 font-semibold flex items-center gap-1">
+          <i class="fa-solid fa-language"></i> <span id="currentLangBadge">Target: Hindi (हिंदी)</span>
+        </span>
+        <span>•</span>
+        <a href="#map-section" class="hover:underline text-emerald-300 font-medium">OpenStreetMap Enabled</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. Responsive Navbar with Language Dropdown
+       ========================================================================= -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="#home" class="flex items-center gap-3 group">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-culture-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
+          <i class="fa-solid fa-landmark text-lg"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-bold font-serif-culture tracking-tight text-slate-900 flex items-center gap-1">
+            Heritage<span class="text-culture-600">Yatra</span>
+          </span>
+          <span class="block text-[10px] tracking-wider uppercase font-semibold text-eco-600">Culture • Craft • Eco Tourism</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <div class="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-700">
+        <a href="#home" class="hover:text-culture-600 transition-colors">Home</a>
+        <a href="#explore" class="hover:text-culture-600 transition-colors">Explore</a>
+        <a href="#heritage" class="hover:text-culture-600 transition-colors">Heritage</a>
+        <a href="#artists" class="hover:text-culture-600 transition-colors">Artists</a>
+        <a href="#eco-tourism" class="hover:text-culture-600 transition-colors">Eco Tourism</a>
+        <a href="#map-section" class="hover:text-culture-600 transition-colors">Map</a>
+        <a href="#planner" class="hover:text-culture-600 transition-colors">Planner</a>
+      </div>
+
+      <!-- Language Selector & Actions -->
+      <div class="hidden sm:flex items-center gap-3">
+        <!-- Language Select Dropdown -->
+        <div class="relative flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+          <i class="fa-solid fa-language text-slate-500 ml-2 text-base"></i>
+          <select id="languageSelect" class="bg-transparent text-sm font-semibold text-slate-800 py-1.5 pl-2 pr-3 focus:outline-none cursor-pointer">
+            <option value="hi" selected>Hindi (हिंदी)</option>
+            <option value="mr">Marathi (मराठी)</option>
+            <option value="bn">Bengali (বাংলা)</option>
+            <option value="ta">Tamil (தமிழ்)</option>
+            <option value="te">Telugu (తెలుగు)</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        <!-- Translate Page Action Button -->
+        <button id="translatePageBtn" class="flex items-center gap-2 bg-gradient-to-r from-culture-600 to-amber-600 hover:from-culture-700 hover:to-amber-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 transition-all active:scale-95">
+          <i class="fa-solid fa-globe"></i>
+          <span id="translatePageBtnLabel">Translate Page to Hindi</span>
+        </button>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button id="mobileMenuBtn" class="lg:hidden text-slate-700 hover:text-slate-900 p-2 rounded-lg focus:outline-none" aria-label="Toggle Navigation Menu">
+        <i class="fa-solid fa-bars text-xl"></i>
+      </button>
+    </nav>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobileMenu" class="hidden lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
+      <div class="grid grid-cols-2 gap-2 text-sm font-medium">
+        <a href="#home" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Home</a>
+        <a href="#explore" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Explore</a>
+        <a href="#heritage" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Heritage</a>
+        <a href="#artists" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Artists</a>
+        <a href="#eco-tourism" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Eco Tourism</a>
+        <a href="#map-section" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Map</a>
+        <a href="#planner" class="p-2 rounded-lg hover:bg-slate-100 text-slate-800">Planner</a>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
+        <div class="flex items-center bg-slate-100 rounded-lg p-2">
+          <i class="fa-solid fa-language text-slate-500 mr-2"></i>
+          <select id="mobileLanguageSelect" class="bg-transparent w-full text-sm font-medium text-slate-800 focus:outline-none">
+            <option value="hi" selected>Hindi (हिंदी)</option>
+            <option value="mr">Marathi (मराठी)</option>
+            <option value="bn">Bengali (বাংলা)</option>
+            <option value="ta">Tamil (தமிழ்)</option>
+            <option value="te">Telugu (తెలుగు)</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <button id="mobileTranslatePageBtn" class="w-full flex items-center justify-center gap-2 bg-culture-600 text-white py-2.5 rounded-lg text-sm font-semibold">
+          <i class="fa-solid fa-globe"></i>
+          <span>Translate Page</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- =======================================================================
+         3. Hero Section (With Folk Art Background Image)
+         ======================================================================= -->
+    <section id="home" class="relative hero-folk-bg text-white py-24 lg:py-32 overflow-hidden shadow-xl">
+      <!-- Ambient Gradient Glow Overlays -->
+      <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none"></div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="max-w-3xl space-y-6">
+          
+          <!-- Badge -->
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 text-xs font-bold text-amber-300">
+            <i class="fa-solid fa-palette text-amber-400"></i>
+            <span>Authentic Indian Folk Art &amp; Sustainable Tourism</span>
+          </div>
+
+          <!-- Hero Heading -->
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold font-serif-culture tracking-tight leading-tight text-white drop-shadow-md">
+            Discover India's <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-300 to-emerald-300">Local Heritage</span>
+          </h1>
+
+          <!-- Description -->
+          <p class="text-lg sm:text-xl text-slate-200 leading-relaxed font-light drop-shadow">
+            Explore traditional art, local culture, heritage places and eco-tourism destinations. Connect directly with tribal artisans and experience authentic living traditions.
+          </p>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap items-center gap-4 pt-4">
+            <a href="#explore" class="inline-flex items-center gap-2.5 bg-gradient-to-r from-culture-600 to-amber-500 hover:from-culture-500 hover:to-amber-400 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-orange-500/30 transition-all hover:scale-105 active:scale-95">
+              <i class="fa-solid fa-compass"></i>
+              <span>Explore Places</span>
+            </a>
+            <a href="#map-section" class="inline-flex items-center gap-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-600 text-white px-8 py-4 rounded-xl font-bold backdrop-blur-sm transition-all hover:scale-105 active:scale-95">
+              <i class="fa-solid fa-map-location-dot text-emerald-400"></i>
+              <span>Explore Map</span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         4. Explore Places Section (Search, Filters, & Destination Cards)
+         ======================================================================= -->
+    <section id="explore" class="py-16 bg-slate-50 border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        
+        <!-- Section Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-culture-600">Curated Destinations</span>
+            <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900 mt-1">
+              Featured Heritage & Eco Destinations
+            </h2>
+            <p class="text-slate-600 mt-2 text-sm sm:text-base">
+              Discover pristine natural waterfalls, ancient historical marvels, and authentic tribal craft hubs.
+            </p>
+          </div>
+
+          <!-- Total Count Badge -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold shadow-sm self-start md:self-auto">
+            <i class="fa-solid fa-location-dot text-culture-600"></i>
+            <span id="placesCount">Showing 6 Destinations</span>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+            
+            <!-- Search Bar Input -->
+            <div class="relative w-full md:w-96">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search destinations (e.g. Bastar, Waterfall)..."
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-culture-500 focus:bg-white transition-all"
+              />
+              <button id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear Search">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <!-- Category Filter Buttons -->
+            <div class="flex flex-wrap gap-2 w-full md:w-auto" id="categoryFilters">
+              <button data-category="All" class="category-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-culture-600 text-white shadow-sm">
+                All
+              </button>
+              <button data-category="Heritage" class="category-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700">
+                Heritage
+              </button>
+              <button data-category="Folk Art" class="category-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700">
+                Folk Art
+              </button>
+              <button data-category="Eco Tourism" class="category-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700">
+                Eco Tourism
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Dynamic Destination Cards Grid -->
+        <div id="placesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Populated by script.js -->
+        </div>
+
+        <!-- Empty State Message -->
+        <div id="noResultsMessage" class="hidden text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 p-8 space-y-3">
+          <div class="w-12 h-12 rounded-full bg-slate-100 mx-auto flex items-center justify-center text-slate-400 text-xl">
+            <i class="fa-solid fa-compass-slash"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-800">No destinations found</h3>
+          <p class="text-sm text-slate-500">Try adjusting your search keywords or switching category filters.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         5. OpenStreetMap + Leaflet Section
+         ======================================================================= -->
+    <section id="map-section" class="py-16 bg-white border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold mb-2">
+              <i class="fa-solid fa-map-pin"></i>
+              <span>Live Leaflet.js &amp; OpenStreetMap</span>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900">
+              Interactive Heritage &amp; Eco Map
+            </h2>
+            <p class="text-slate-600 mt-1 text-sm sm:text-base">
+              Click on any pin to inspect destination highlights, eco scores, and coordinates.
+            </p>
+          </div>
+
+          <!-- Map Quick Jump Buttons -->
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="text-slate-500 font-medium">Quick Jump:</span>
+            <button onclick="focusOnMap(19.203, 81.702, 'Chitrakote Waterfall')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">Chitrakote</button>
+            <button onclick="focusOnMap(18.905, 81.864, 'Tirathgarh Waterfall')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">Tirathgarh</button>
+            <button onclick="focusOnMap(21.343, 82.179, 'Sirpur')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">Sirpur</button>
+            <button onclick="focusOnMap(19.107, 81.953, 'Bastar')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">Bastar</button>
+            <button onclick="resetMapView()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-lg font-semibold transition-colors">Reset View</button>
+          </div>
+        </div>
+
+        <!-- Map Container Box -->
+        <div class="relative rounded-2xl overflow-hidden border border-slate-300 shadow-lg bg-slate-100">
+          <div id="map"></div>
+          
+          <!-- Map Overlay Legend -->
+          <div class="absolute bottom-4 left-4 z-[400] bg-white/90 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-md text-xs space-y-1.5">
+            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+              <i class="fa-solid fa-layer-group text-culture-600"></i>
+              <span>Map Legend</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-600">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+              <span>Eco Tourism Destinations</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-600">
+              <span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span>
+              <span>Heritage &amp; Folk Art Centers</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         6. Living Heritage Section (With Dynamic Language Indicators & Working Translation)
+         ======================================================================= -->
+    <section id="heritage" class="py-16 bg-slate-50 border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <!-- Section Header with Language Indicator -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-culture-600">Traditional Arts &amp; Culture</span>
+            <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900 mt-1">
+              Explore Living Heritage
+            </h2>
+            <p class="text-slate-600 mt-2 text-sm sm:text-base max-w-2xl">
+              Centuries-old crafts, sacred metallurgy, mesmerizing rhythmic dances, and authentic folk music passed down through generations.
+            </p>
+          </div>
+
+          <!-- Target Language Pill Indicator -->
+          <div class="bg-amber-100/80 border border-amber-300 text-amber-900 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 self-start md:self-auto shadow-sm">
+            <i class="fa-solid fa-language text-culture-700 text-sm"></i>
+            <span>Current Target: <span id="heritageLangTargetName" class="underline decoration-culture-600 decoration-2">Hindi (हिंदी)</span></span>
+          </div>
+        </div>
+
+        <!-- 5 Heritage Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="heritageCardsContainer">
+          
+          <!-- Heritage Card 1: Bastar Dhokra Art -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4" data-heritage-id="dhokra">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Metallurgy</span>
+                <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Bastar
+                </span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 heritage-title">Bastar Dhokra Art</h3>
+              <p class="text-slate-600 text-sm leading-relaxed heritage-desc" id="heritage-desc-dhokra">
+                Ancient lost-wax brass casting technique practiced by indigenous artisans for over 4,000 years, creating intricate figurines of folk deities and nature.
+              </p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Living Craft</span>
+              <button onclick="translateHeritageCard('dhokra')" class="heritage-translate-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-culture-50 hover:bg-culture-600 text-culture-700 hover:text-white border border-culture-200 transition-all active:scale-95">
+                <i class="fa-solid fa-globe"></i>
+                <span class="btn-text">Translate to Hindi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Heritage Card 2: Bell Metal Craft -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4" data-heritage-id="bellmetal">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800">Folk Craft</span>
+                <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Kondagaon
+                </span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 heritage-title">Bell Metal Craft</h3>
+              <p class="text-slate-600 text-sm leading-relaxed heritage-desc" id="heritage-desc-bellmetal">
+                Sacred bell-metal brass sculptures sculpted by traditional Ghadwa craftsmen depicting tribal folklore, ritual trumpets, and wildlife motifs.
+              </p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Living Craft</span>
+              <button onclick="translateHeritageCard('bellmetal')" class="heritage-translate-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-culture-50 hover:bg-culture-600 text-culture-700 hover:text-white border border-culture-200 transition-all active:scale-95">
+                <i class="fa-solid fa-globe"></i>
+                <span class="btn-text">Translate to Hindi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Heritage Card 3: Tribal Dance -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4" data-heritage-id="tribaldance">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">Performing Arts</span>
+                <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Bastar &amp; Kanger
+                </span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 heritage-title">Tribal Dance (Gaur Maria &amp; Karma)</h3>
+              <p class="text-slate-600 text-sm leading-relaxed heritage-desc" id="heritage-desc-tribaldance">
+                Celebratory folk dances performed during harvests and weddings with ceremonial bison-horn headgear, syncing perfectly to rhythmic drum beats.
+              </p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Living Tradition</span>
+              <button onclick="translateHeritageCard('tribaldance')" class="heritage-translate-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-culture-50 hover:bg-culture-600 text-culture-700 hover:text-white border border-culture-200 transition-all active:scale-95">
+                <i class="fa-solid fa-globe"></i>
+                <span class="btn-text">Translate to Hindi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Heritage Card 4: Folk Music & Instruments -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4" data-heritage-id="folkmusic">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-100 text-cyan-800">Indigenous Music</span>
+                <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Jagdalpur
+                </span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 heritage-title">Folk Music &amp; Instruments</h3>
+              <p class="text-slate-600 text-sm leading-relaxed heritage-desc" id="heritage-desc-folkmusic">
+                Soulful indigenous melodies played on bamboo flutes, Mohri horn, and traditional Mandar drums narrating local legends of nature and ancestors.
+              </p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Living Tradition</span>
+              <button onclick="translateHeritageCard('folkmusic')" class="heritage-translate-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-culture-50 hover:bg-culture-600 text-culture-700 hover:text-white border border-culture-200 transition-all active:scale-95">
+                <i class="fa-solid fa-globe"></i>
+                <span class="btn-text">Translate to Hindi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Heritage Card 5: Traditional Handicrafts & Terracotta -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 md:col-span-2 lg:col-span-1" data-heritage-id="handicrafts">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Clay &amp; Iron</span>
+                <span class="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Kondagaon
+                </span>
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 heritage-title">Traditional Handicrafts</h3>
+              <p class="text-slate-600 text-sm leading-relaxed heritage-desc" id="heritage-desc-handicrafts">
+                Distinctive unglazed clay terracotta pottery and wrought iron (Loha Shilp) created using age-old ancestral smithing traditions.
+              </p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Living Craft</span>
+              <button onclick="translateHeritageCard('handicrafts')" class="heritage-translate-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-culture-50 hover:bg-culture-600 text-culture-700 hover:text-white border border-culture-200 transition-all active:scale-95">
+                <i class="fa-solid fa-globe"></i>
+                <span class="btn-text">Translate to Hindi</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         7. Local Artists Section (Direct from Artist - Middleman Free)
+         ======================================================================= -->
+    <section id="artists" class="py-16 bg-white border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        
+        <!-- Section Header with Mission Statement -->
+        <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-emerald-50 rounded-3xl p-6 sm:p-8 border border-amber-200/70">
+          <div class="max-w-3xl space-y-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold">
+              <i class="fa-solid fa-handshake-simple"></i>
+              <span>Fair Trade &amp; Empowerment</span>
+            </span>
+            <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900">
+              Meet Local Tribal Artisans
+            </h2>
+            <p class="text-slate-700 text-sm sm:text-base leading-relaxed">
+              <strong>Direct from Artist:</strong> We connect tourists directly with indigenous master craftsmen. By bypassing middlemen, 100% of fair compensation supports the artisan families and preserves heritage skills.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3 Artist Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Artist 1 -->
+          <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-culture-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-5">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  RK
+                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <i class="fa-solid fa-certificate"></i> Direct from Artist
+                </span>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">Ramesh Kumar</h3>
+                <p class="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Bastar, Chhattisgarh
+                </p>
+              </div>
+              <div class="space-y-2 text-xs text-slate-600 border-t border-slate-200 pt-3">
+                <p><strong class="text-slate-800">Speciality:</strong> Dhokra Brass Sculptor</p>
+                <p><strong class="text-slate-800">Experience:</strong> 20+ Years Experience</p>
+                <p class="italic text-slate-500">"Every sculpture carries the blessing of our forest spirits and ancestors."</p>
+              </div>
+            </div>
+            <button onclick="showArtistModal('Ramesh Kumar', 'Dhokra Brass Art', 'Bastar')" class="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-900 text-white transition-colors flex items-center justify-center gap-2">
+              <i class="fa-solid fa-comment-dots"></i>
+              <span>Connect with Artist</span>
+            </button>
+          </div>
+
+          <!-- Artist 2 -->
+          <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-culture-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-5">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-full bg-culture-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  SD
+                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <i class="fa-solid fa-certificate"></i> Direct from Artist
+                </span>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">Sumitra Devi</h3>
+                <p class="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Kondagaon, Chhattisgarh
+                </p>
+              </div>
+              <div class="space-y-2 text-xs text-slate-600 border-t border-slate-200 pt-3">
+                <p><strong class="text-slate-800">Speciality:</strong> Master Terracotta Potter</p>
+                <p><strong class="text-slate-800">Experience:</strong> 15+ Years Experience</p>
+                <p class="italic text-slate-500">"Shaping clay with organic dyes collected from local wild flowers."</p>
+              </div>
+            </div>
+            <button onclick="showArtistModal('Sumitra Devi', 'Terracotta Art', 'Kondagaon')" class="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-900 text-white transition-colors flex items-center justify-center gap-2">
+              <i class="fa-solid fa-comment-dots"></i>
+              <span>Connect with Artist</span>
+            </button>
+          </div>
+
+          <!-- Artist 3 -->
+          <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-culture-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-5">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  MN
+                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <i class="fa-solid fa-certificate"></i> Direct from Artist
+                </span>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">Mohan Netam</h3>
+                <p class="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                  <i class="fa-solid fa-location-dot text-culture-600"></i> Jagdalpur, Chhattisgarh
+                </p>
+              </div>
+              <div class="space-y-2 text-xs text-slate-600 border-t border-slate-200 pt-3">
+                <p><strong class="text-slate-800">Speciality:</strong> Tribal Wood &amp; Iron Craftsman</p>
+                <p><strong class="text-slate-800">Experience:</strong> 18+ Years Experience</p>
+                <p class="italic text-slate-500">"Preserving traditional Loha Shilp ironcraft forged on charcoal anvils."</p>
+              </div>
+            </div>
+            <button onclick="showArtistModal('Mohan Netam', 'Wrought Iron Craft', 'Jagdalpur')" class="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-900 text-white transition-colors flex items-center justify-center gap-2">
+              <i class="fa-solid fa-comment-dots"></i>
+              <span>Connect with Artist</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         8. Simple AI-Like Travel Planner (Interactive Manual Plan Execution)
+         ======================================================================= -->
+    <section id="planner" class="py-16 bg-slate-50 border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-culture-600">Smart Itinerary Generator</span>
+          <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900 mt-1">
+            Plan Your Heritage &amp; Eco Journey
+          </h2>
+          <p class="text-slate-600 mt-1 text-sm sm:text-base max-w-2xl">
+            Select your preferred destination, trip duration, and interests to generate a curated step-by-step itinerary instantly.
+          </p>
+        </div>
+
+        <!-- Planner Form Container -->
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Destination Select -->
+            <div class="space-y-2">
+              <label for="plannerDestination" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <i class="fa-solid fa-location-arrow text-culture-600 mr-1"></i> Destination
+              </label>
+              <select id="plannerDestination" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-culture-500 focus:outline-none cursor-pointer">
+                <option value="Bastar" selected>Bastar</option>
+                <option value="Sirpur">Sirpur</option>
+                <option value="Jagdalpur">Jagdalpur</option>
+              </select>
+            </div>
+
+            <!-- Duration Select -->
+            <div class="space-y-2">
+              <label for="plannerDuration" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <i class="fa-solid fa-calendar-days text-amber-600 mr-1"></i> Duration
+              </label>
+              <select id="plannerDuration" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-culture-500 focus:outline-none cursor-pointer">
+                <option value="1">1 Day</option>
+                <option value="2" selected>2 Days</option>
+                <option value="3">3 Days</option>
+              </select>
+            </div>
+
+            <!-- Interest Select -->
+            <div class="space-y-2">
+              <label for="plannerInterest" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <i class="fa-solid fa-heart text-rose-600 mr-1"></i> Primary Interest
+              </label>
+              <select id="plannerInterest" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-culture-500 focus:outline-none cursor-pointer">
+                <option value="Folk Art" selected>Folk Art</option>
+                <option value="Heritage">Heritage</option>
+                <option value="Nature">Nature</option>
+                <option value="Local Food">Local Food</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Generate Action Button -->
+          <div class="pt-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100">
+            <button id="generatePlanBtn" class="bg-gradient-to-r from-culture-600 to-amber-600 hover:from-culture-700 hover:to-amber-700 text-white px-8 py-3.5 rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 transition-all flex items-center gap-2 active:scale-95 cursor-pointer">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Generate Plan</span>
+            </button>
+            <span class="text-xs text-slate-500 font-medium">⚡ Instant Interactive Itinerary &amp; Leaflet Route Mapping</span>
+          </div>
+        </div>
+
+        <!-- Generated Itinerary Display Box -->
+        <div id="itineraryResult" class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+          <!-- Populated by script.js -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         9. Eco Tourism Sustainability Principles Section
+         ======================================================================= -->
+    <section id="eco-tourism" class="py-16 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <div class="text-center max-w-3xl mx-auto space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+            <i class="fa-solid fa-leaf"></i>
+            <span>Eco Score Evaluation Methodology</span>
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-bold font-serif-culture text-slate-900">
+            How We Measure Eco Sustainability
+          </h2>
+          <p class="text-slate-600 text-sm sm:text-base">
+            Every destination is scored out of 100 based on three transparent environmental and cultural preservation parameters.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+          
+          <div class="p-6 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg">
+              <i class="fa-solid fa-tree"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">1. Nature Protection (40%)</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Evaluating biodiversity preservation, forest canopy safety, water conservation, and zero-plastic policies in national parks.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-cyan-50/60 border border-cyan-100 space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center text-lg">
+              <i class="fa-solid fa-recycle"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">2. Waste Management (30%)</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Monitoring composting systems, segregation of organic waste, and non-intrusive eco-friendly visitor trails.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center text-lg">
+              <i class="fa-solid fa-store"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">3. Local Business (30%)</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Ensuring direct financial flow to local tribal guides, homestays, indigenous artisans, and traditional eateries.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- =========================================================================
+       10. Footer
+       ========================================================================= -->
+  <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        
+        <!-- Brand Info -->
+        <div class="md:col-span-2 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-culture-600 flex items-center justify-center text-white font-bold">
+              <i class="fa-solid fa-landmark"></i>
+            </div>
+            <span class="text-xl font-bold font-serif-culture text-white">Heritage<span class="text-culture-500">Yatra</span></span>
+          </div>
+          <p class="text-xs text-slate-400 max-w-md leading-relaxed">
+            A digital platform for preserving indigenous cultural heritage, empowering tribal artisans with direct trade, and promoting eco-conscious tourism destinations.
+          </p>
+          <div class="text-xs text-slate-500">
+            Powered by <strong>Leaflet.js</strong>, <strong>OpenStreetMap</strong>, &amp; <strong>Local LibreTranslate</strong>.
+          </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-200">Navigation</h4>
+          <ul class="space-y-2 text-xs">
+            <li><a href="#explore" class="hover:text-white transition-colors">Explore Destinations</a></li>
+            <li><a href="#heritage" class="hover:text-white transition-colors">Living Heritage Crafts</a></li>
+            <li><a href="#artists" class="hover:text-white transition-colors">Tribal Artisans</a></li>
+            <li><a href="#map-section" class="hover:text-white transition-colors">Interactive Map</a></li>
+            <li><a href="#planner" class="hover:text-white transition-colors">Travel Planner</a></li>
+          </ul>
+        </div>
+
+        <!-- Local LibreTranslate Guide -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-200">Translation Service</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Translation uses your local server at <code class="text-amber-400">http://localhost:5000</code> or offline multilingual dictionary.
+          </p>
+          <div class="bg-slate-800 p-2.5 rounded-lg border border-slate-700 text-[11px] text-slate-300 font-mono">
+            $ libretranslate --cors
+          </div>
+        </div>
+
+      </div>
+
+      <div class="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <p>© 2026 HeritageYatra • Built for Cultural Heritage &amp; Eco-Tourism Preservation.</p>
+        <p class="flex items-center gap-1">
+          <span>Made with</span>
+          <i class="fa-solid fa-heart text-rose-500"></i>
+          <span>for Indian Tribal Heritage</span>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification Popup (for Translation feedback & alerts) -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none max-w-sm w-full">
+    <div id="toastInner" class="bg-slate-900 text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-start gap-3 text-xs">
+      <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base mt-0.5"></i>
+      <div class="space-y-0.5">
+        <p id="toastTitle" class="font-bold text-white">Notification</p>
+        <p id="toastMessage" class="text-slate-300">Message description goes here.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Artist Contact Modal Dialog -->
+  <div id="artistModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Direct Artisan Inquiry</h3>
+        </div>
+        <button onclick="closeArtistModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2 bg-slate-50 p-4 rounded-xl text-xs text-slate-700 border border-slate-200">
+        <p>Connecting with: <strong id="modalArtistName" class="text-slate-900 font-bold">Ramesh Kumar</strong></p>
+        <p>Craft: <span id="modalArtistCraft" class="text-culture-700 font-semibold">Dhokra Art</span></p>
+        <p>Location: <span id="modalArtistLoc">Bastar, Chhattisgarh</span></p>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Your Name</label>
+          <input type="text" placeholder="Enter your name" class="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-culture-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Inquiry / Custom Craft Order</label>
+          <textarea rows="3" placeholder="Describe the traditional artwork you would like to order directly..." class="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-culture-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="submitArtistInquiry()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-culture-600 hover:bg-culture-700 text-white transition-colors">
+          Send Inquiry Directly
+        </button>
+        <button onclick="closeArtistModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet.js Script for OpenStreetMap -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Main JavaScript File -->
+  <script src="script.js"></script>
+</body>
+</html>
